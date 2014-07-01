@@ -16,9 +16,9 @@ var workers = { };
 var unresolvedblocks = [ ];
 var inprogressblocks = [ ];
 
-var hashindex = 13; // Edit this line to start at a specific line
+var hashindex = 19; // Edit this line to start at a specific line
 var hash = nextHash();
-var blockstart = 0; // Edit this line to start at a specific block
+var blockstart = 309000000000; // Edit this line to start at a specific block
 var blocksize = 1500000000; // Higher value require more time
 
 var maxresolvetime = 1800; // In seconds
@@ -43,6 +43,7 @@ var onlines = 0;
 var serverprotocol = 11;
 
 console.log("[SERVER] Server is running on port " + port + " with protocol support: " + serverprotocol);
+console.log("[HASH] " + hash);
 
 io.sockets.on("connection", function(socket) {
 
@@ -104,11 +105,9 @@ io.sockets.on("connection", function(socket) {
 							if (data.speed > 0)
 								workers[socket.id].speed = data.speed;
 
-					inprogressblocks[Object.keys(inprogressblocks).length] = claim;
+					sendBlock(socket, hash, claim, blocksize);
 
 					updateStats(io);
-
-					sendBlock(socket, hash, claim, blocksize);
 					console.log(dateFormat() + "[SERVER] Block " + claim + " sent to " + socket.id + ".");
 				}
 			}
@@ -133,10 +132,8 @@ io.sockets.on("connection", function(socket) {
 	socket.on('block-completed', function(blockstart) {
 
 		for (var k in inprogressblocks)
-		{
-			if (inprogressblocks[k] == blockstart)
+			if (inprogressblocks[k] == blockstart || inprogressblocks[k] == workers[socket.id].blockclaimed)
 				inprogressblocks.splice(k, 1);
-		}
 
 		clearTimeout(workers[socket.id].timer[blockstart]);
 
@@ -152,10 +149,14 @@ io.sockets.on("connection", function(socket) {
 
 		workers[socket.id].errors++;
 
-		if (workers[socket.id].errors <= 5)
+		if (workers[socket.id].errors < 5)
 		{
 			console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (" + workers[socket.id].errors + "). Block re-sent.");
 			var claimed = workers[socket.id].blockclaimed;
+
+			for (var k in inprogressblocks)
+				if (inprogressblocks[k] == claimed)
+					inprogressblocks.splice(k, 1);
 
 			if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
 				clearTimeout(workers[socket.id].timer[claimed]);
@@ -165,6 +166,15 @@ io.sockets.on("connection", function(socket) {
 		else
 		{
 			console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (" + workers[socket.id].errors + "). Kicked.");
+
+			var claimed = workers[socket.id].blockclaimed;
+
+			for (var k in inprogressblocks)
+				if (inprogressblocks[k] == claimed)
+					inprogressblocks.splice(k, 1);
+
+			if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
+				clearTimeout(workers[socket.id].timer[claimed]);
 			
 			socket.emit('message-received', "[SERVER] You failed after 5 retries. Kicked.");
 			socket.disconnect();
@@ -226,10 +236,8 @@ io.sockets.on("connection", function(socket) {
 					unresolvedblocks[Object.keys(unresolvedblocks).length] = claimed;
 
 					for (var k in inprogressblocks)
-					{
 						if (inprogressblocks[k] == claimed)
 							inprogressblocks.splice(k, 1);
-					}
 
 					if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
 						clearTimeout(workers[socket.id].timer[claimed]);
@@ -290,6 +298,8 @@ function sendBlock(socket, hash, blockstart, blocksize) {
 	workers[socket.id].timer[blockstart] = setTimeout(workers[socket.id].stop, maxresolvetime * 1000);
 	workers[socket.id].blockclaimed = blockstart;
 	workers[socket.id].ready = false;
+
+	inprogressblocks[Object.keys(inprogressblocks).length] = blockstart;
 
 	socket.emit('block-received', blockdata);
 }
@@ -392,5 +402,12 @@ function updateStats(io) {
 function dateFormat() {
 	var date = new Date();
 
-	return "[" + date.getMonth() + "-" + date.getDate() + "-" + date.getFullYear() + " " + date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "]";
+	var year = date.getFullYear();
+	var month = (date.getMonth() < 10) ? "0" + date.getMonth() : date.getMonth();
+	var day = (date.getDate() < 10) ? "0" + date.getDate() : date.getDate();
+	var hours = (date.getHours() < 10) ? "0" + date.getHours() : date.getHours();
+	var minutes = (date.getMinutes() < 10) ? "0" + date.getMinutes() : date.getMinutes();
+	var seconds = (date.getSeconds() < 10) ? "0" + date.getSeconds() : date.getSeconds();
+
+	return "[" + month + "-" + day + "-" + year + " " + hours + ":" + minutes + ":" + seconds + "]";
 }
