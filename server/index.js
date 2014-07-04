@@ -19,7 +19,7 @@ var inprogressblocks = [ ];
 var hashindex = 19; // Edit this line to start at a specific line
 var hash = nextHash();
 var blockstart = 309000000000; // Edit this line to start at a specific block
-var blocksize = 1500000000; // Higher value require more time
+var blocksize = 0500000000; // Higher value require more time
 
 var maxresolvetime = 1800; // In seconds
 
@@ -175,45 +175,48 @@ io.sockets.on("connection", function(socket) {
 	});
 
 	socket.on('hash-found', function(decrypted) {
-		if (verifyHash(decrypted))
+		if (exists(decrypted))
 		{
-			console.log(dateFormat() + "[CLIENT] Client id " + socket.id + " decrypted the hash!");
-
-			console.log(dateFormat() + "[SERVER] Saving decrypted hash.");
-			saveHash(decrypted);
-			console.log(dateFormat() + "[SERVER] Loading next hash.");
-			hash = nextHash();
-			console.log(dateFormat() + "[HASH] " + hash);
-
-			if (hash != "")
+			if (verifyHash(decrypted))
 			{
-				console.log(dateFormat() + "[SERVER] Canceling the workers.");
+				console.log(dateFormat() + "[CLIENT] Client id " + socket.id + " decrypted the hash!");
 
-				for (var k in workers)
+				console.log(dateFormat() + "[SERVER] Saving decrypted hash.");
+				saveHash(decrypted);
+				console.log(dateFormat() + "[SERVER] Loading next hash.");
+				hash = nextHash();
+				console.log(dateFormat() + "[HASH] " + hash);
+
+				if (hash != "")
 				{
-					workers[k].ready = true;
+					console.log(dateFormat() + "[SERVER] Canceling the workers.");
 
-					if (typeof(workers[k].blockclaimed) !== typeof(undefined))
+					for (var k in workers)
 					{
-						var claimed = workers[k].blockclaimed;
+						workers[k].ready = true;
 
-						if (typeof(workers[k].timer[claimed]) !== typeof(undefined))
-							clearTimeout(workers[k].timer[claimed]);
+						if (typeof(workers[k].blockclaimed) !== typeof(undefined))
+						{
+							var claimed = workers[k].blockclaimed;
+
+							if (typeof(workers[k].timer[claimed]) !== typeof(undefined))
+								clearTimeout(workers[k].timer[claimed]);
+						}
 					}
-				}
 
-				io.sockets.emit('block-aborted');
+					io.sockets.emit('block-aborted');
+				}
+				else
+				{
+					console.log(dateFormat() + "[SERVER] No more hash. Stopping the workers.");
+					io.sockets.emit('bruteforce-completed');
+				}
 			}
 			else
 			{
-				console.log(dateFormat() + "[SERVER] No more hash. Stopping the workers.");
-				io.sockets.emit('bruteforce-completed');
+				socket.emit("[SERVER] Your result is wrong, please contact admin with a paste of hashcat.pot.");
+				workers[socket.id].kick();
 			}
-		}
-		else
-		{
-			socket.emit("[SERVER] Your result is wrong, please contact admin with a paste of hashcat.pot.");
-			workers[socket.id].kick();
 		}
 	});
 
@@ -290,8 +293,11 @@ var worker = function(socket) {
 }
 
 function exists(variable) {
-	if (typeof(variable) !== typeof(undefined))
-		return true;
+	if (typeof(variable) !== typeof(undefined) && variable)
+		if (variable != null)
+			return true;
+		else
+			return false;
 	else
 		return false;
 }
