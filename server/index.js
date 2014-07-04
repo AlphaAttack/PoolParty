@@ -370,7 +370,7 @@ function saveAbortedHash(hash) {
 	if (!fs.existsSync("server/aborted.txt"))
 		fs.writeFileSync("server/aborted.txt", "");
 
-	var string = hash + '\n\r';
+	var string = hash + '\n';
 
 	fs.appendFileSync("server/aborted.txt", string.toString());
 }
@@ -379,7 +379,7 @@ function saveHash(decrypted) {
 	if (!fs.existsSync("server/decrypted.txt"))
 		fs.writeFileSync("server/decrypted.txt", "");
 
-	var string = hash + ":" + decrypted + '\n\r';
+	var string = hash + ":" + decrypted + '\n';
 
 	fs.appendFileSync("server/decrypted.txt", string.toString());
 }
