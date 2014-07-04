@@ -51,9 +51,9 @@ io.sockets.on("connection", function(socket) {
 
 	socket.on('worker-login', function(data) {
 
-		if (typeof(data) !== typeof(undefined))
+		if (exists(data))
 		{
-			if (typeof(data.version) !== typeof(undefined) && typeof(data.system) !== typeof(undefined))
+			if (exists(data.version) && exists(data.system))
 			{
 				if (data.version == serverprotocol)
 				{
@@ -87,7 +87,7 @@ io.sockets.on("connection", function(socket) {
 	socket.on('block-request', function(data) {
 		if (blockstart <= autoskip || Object.keys(unresolvedblocks).length > 0)
 		{
-			if (typeof(workers[socket.id]) !== typeof(undefined))
+			if (exists(workers[socket.id]))
 			{
 				if (workers[socket.id].ready)
 				{
@@ -146,38 +146,31 @@ io.sockets.on("connection", function(socket) {
 	});
 
 	socket.on('block-error', function() {
-
-		workers[socket.id].errors++;
-
-		if (workers[socket.id].errors < 5)
+		if (exists(workers[socket.id]))
 		{
-			console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (" + workers[socket.id].errors + "). Block re-sent.");
-			var claimed = workers[socket.id].blockclaimed;
+			workers[socket.id].errors++;
 
-			for (var k in inprogressblocks)
-				if (inprogressblocks[k] == claimed)
-					inprogressblocks.splice(k, 1);
+			if (workers[socket.id].errors < 5)
+			{
+				console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (" + workers[socket.id].errors + "). Block re-sent.");
+				var claimed = workers[socket.id].blockclaimed;
 
-			if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
-				clearTimeout(workers[socket.id].timer[claimed]);
+				for (var k in inprogressblocks)
+					if (inprogressblocks[k] == claimed)
+						inprogressblocks.splice(k, 1);
 
-			sendBlock(socket, hash, claimed, blocksize);
-		}
-		else
-		{
-			console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (" + workers[socket.id].errors + "). Kicked.");
+				if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
+					clearTimeout(workers[socket.id].timer[claimed]);
 
-			var claimed = workers[socket.id].blockclaimed;
-
-			for (var k in inprogressblocks)
-				if (inprogressblocks[k] == claimed)
-					inprogressblocks.splice(k, 1);
-
-			if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
-				clearTimeout(workers[socket.id].timer[claimed]);
-			
-			socket.emit('message-received', "[SERVER] You failed after 5 retries. Kicked.");
-			socket.disconnect();
+				sendBlock(socket, hash, claimed, blocksize);
+			}
+			else
+			{
+				console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (" + workers[socket.id].errors + "). Kicked.");
+				
+				socket.emit('message-received', "[SERVER] You failed after 5 retries. Kicked.");
+				workers[socket.id].drop();
+			}
 		}
 	});
 
@@ -220,51 +213,38 @@ io.sockets.on("connection", function(socket) {
 		else
 		{
 			socket.emit("[SERVER] Your result is wrong, please contact admin with a paste of hashcat.pot.");
-			socket.disconnect();
+			workers[socket.id].kick();
 		}
 	});
 
 	socket.on('disconnect', function() {
-
-		if (typeof(workers[socket.id]) != typeof(undefined)) // Check if it's a worker
+		// Fix pool freeze when pool is waiting for the last client and this one left.
+		/*if (blockstart > autoskip && Object.keys(unresolvedblocks).length > 0 && Object.keys(inprogressblocks).length == 0)
 		{
-			if (typeof(workers[socket.id].blockclaimed) !== typeof(undefined))
+			for (var k in workers)
 			{
-				if (workers[socket.id].blockclaimed != null)
+				if (workers[k].ready && Object.keys(unresolvedblocks).length > 0)
 				{
-					var claimed = workers[socket.id].blockclaimed;
-					unresolvedblocks[Object.keys(unresolvedblocks).length] = claimed;
+					var claimed = unresolvedblocks.shift();
 
-					for (var k in inprogressblocks)
-						if (inprogressblocks[k] == claimed)
-							inprogressblocks.splice(k, 1);
-
-					if (typeof(workers[socket.id].timer[claimed]) !== typeof(undefined))
-						clearTimeout(workers[socket.id].timer[claimed]);
-
-					// Fix pool freeze when pool is waiting for the last client and this one left.
-					/*if (blockstart > autoskip && Object.keys(unresolvedblocks).length > 0 && Object.keys(inprogressblocks).length == 0)
-					{
-						for (var k in workers)
-						{
-							if (workers[k].ready && Object.keys(unresolvedblocks).length > 0)
-							{
-								var claimed = unresolvedblocks.shift();
-
-								workers[k].socket.emit('message-received', "[SERVER] Server requested you to compute block until hash skip.");
-								sendBlock(workers[k].socket, hash, claimed, blocksize);
-							}
-						}
-					}*/
-
-					delete workers[socket.id];
-
-					console.log(dateFormat() + "[SERVER] Client " + socket.id + " lost connection. Block " + claimed + " added to queue.");
+					workers[k].socket.emit('message-received', "[SERVER] Server requested you to compute block until hash skip.");
+					sendBlock(workers[k].socket, hash, claimed, blocksize);
 				}
 			}
+		}*/
+
+		if (exists(workers[socket.id]))
+		{
+			workers[socket.id].drop();
+			console.log(dateFormat() + "[SERVER] Client " + socket.id + " lost connection. Block " + claimed + " added to queue.");
 
 			updateStats(io);
 		}
+	});
+
+	socket.on('close', function() {
+		if (exists(workers[socket.id]))
+			workers[socket.id].drop();
 	});
 });
 
@@ -273,16 +253,46 @@ var worker = function(socket) {
 	this.speed = 0;
 	this.ready = true;
 	this.errors = 0;
+	this.blockclaimed = null;
 	this.timer = { };
 
 	this.stop = function() {
 
 		console.log(dateFormat() + "[SERVER] Worker " + socket.id + " failed block (Timeout). Kicked.");
 		socket.emit('message-received', "[SERVER] You failed after 30 minutes. Kicked.");
+		
+		this.kick();
+	}
+
+	this.kick = function() {
 		socket.disconnect();
 	}
 
+	this.drop = function() {
+		if (exists(this.blockclaimed))
+			if (this.blockclaimed != null)
+				unresolvedblocks[Object.keys(unresolvedblocks).length] = this.blockclaimed;
+
+		for (var k in inprogressblocks)
+			if (inprogressblocks[k] == this.blockclaimed)
+				inprogressblocks.splice(k, 1);
+
+		if (exists(this.timer[this.blockclaimed]))
+			clearTimeout(this.timer[this.blockclaimed]);
+
+		this.kick();
+
+		delete workers[socket.id];
+	}
+
 	return this;
+}
+
+function exists(variable) {
+	if (typeof(variable) !== typeof(undefined))
+		return true;
+	else
+		return false;
 }
 
 function sendBlock(socket, hash, blockstart, blocksize) {
