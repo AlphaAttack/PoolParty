@@ -1,11 +1,13 @@
 // Settings
-var ip = 'hashcat-pool.webhop.me'; // IP of pool
+var ip = '127.0.0.1'; // IP of pool
 var port = '1337'; // Port of pool
 
 var exec = require('child_process').exec;
 var io = require('socket.io-client')('http://' + ip + ':' + port);
 var fs = require('fs');
 var os = require('os');
+
+var algorithm = require('./algorithm/algorithm.js');
 
 var child;
 
@@ -44,6 +46,8 @@ io.on('connect', function(socket) {
 		var blockstart = blockdata.blockstart;
 		var blocksize = blockdata.blocksize;
 
+		algorithm.SetHashType(hashtype);
+
 		if (fs.existsSync("hashcat/hash.txt"))
 			fs.unlinkSync("hashcat/hash.txt");
 
@@ -51,7 +55,7 @@ io.on('connect', function(socket) {
 
 		if (fs.existsSync("hashcat/hashcat-cli32.exe") && fs.existsSync("hashcat/hashcat-cli64.exe") && fs.existsSync("hashcat/hashcat-cli32.bin") && fs.existsSync("hashcat/hashcat-cli64.bin") && fs.existsSync("hashcat/hashcat-cli64.app"))
 		{
-			var command = '"hashcat/hashcat-cli64.exe" -m ' + hashtype + ' -a ' + attackmode + ' -s ' + blockstart + ' -l ' + blocksize + ' "hashcat/hash.txt" ?a?a?a?a?a?a?a?a?a?a?a?a?a';
+			var command = '"hashcat/hashcat-cli64.exe" -m ' + hashtype + ' -a ' + attackmode + ' -s ' + blockstart + ' -l ' + blocksize + ' -o "hashcat/decrypted.txt" "hashcat/hash.txt" ?a?a?a?a?a?a?a?a?a?a?a?a?a';
 
 			var fail = false;
 
@@ -71,7 +75,7 @@ io.on('connect', function(socket) {
 			child.on('close', function(code) {
 				if (!fail)
 				{
-					if (!hashFound())
+					if (!algorithm.BruteforceSucceeded)
 					{
 						console.log(dateFormat() + "[CLIENT] No hash discovered, requesting block from pool.");
 
@@ -79,7 +83,7 @@ io.on('connect', function(socket) {
 					}
 					else
 					{
-						var result = decrypted(); drop();
+						var result = algorithm.BruteforceResult();
 
 						console.log(dateFormat() + "[CLIENT] Hash discovered: " + result + ".");
 						
@@ -160,11 +164,6 @@ function decrypted() {
 	}
 	else
 		return "";
-}
-
-function drop() {
-	if (fs.existsSync("hashcat.pot"))
-		fs.unlinkSync("hashcat.pot");
 }
 
 function parseSpeed(string) {
