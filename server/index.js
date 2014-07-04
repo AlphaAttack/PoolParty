@@ -17,7 +17,8 @@ var unresolvedblocks = [ ];
 var inprogressblocks = [ ];
 
 var hashindex = 19; // Edit this line to start at a specific line
-var hash = nextHash();
+var hash;
+var hashtype;
 var blockstart = 309000000000; // Edit this line to start at a specific block
 var blocksize = 0500000000; // Higher value require more time
 
@@ -39,6 +40,7 @@ var autoskip = 735091890625;
 
 var poolspeed = 0;
 var onlines = 0;
+var completed = false;
 
 var serverprotocol = 12;
 
@@ -85,46 +87,49 @@ io.sockets.on("connection", function(socket) {
 	});
 
 	socket.on('block-request', function(data) {
-		if (blockstart <= autoskip || Object.keys(unresolvedblocks).length > 0)
+		if (!completed)
 		{
-			if (exists(workers[socket.id]))
+			if (blockstart <= autoskip || Object.keys(unresolvedblocks).length > 0)
 			{
-				if (workers[socket.id].ready)
+				if (exists(workers[socket.id]))
 				{
-					if (Object.keys(unresolvedblocks).length > 0) {
+					if (workers[socket.id].ready)
+					{
+						if (Object.keys(unresolvedblocks).length > 0) {
 
-						var claim = unresolvedblocks.shift(); // Return the first element and delete it.
+							var claim = unresolvedblocks.shift(); // Return the first element and delete it.
+						}
+						else {
+							var claim = blockstart;
+							blockstart += blocksize;
+						}
+
+						if (typeof(data) !== typeof(undefined))
+							if (!isNaN(data.speed))
+								if (data.speed > 0)
+									workers[socket.id].speed = data.speed;
+
+						sendBlock(socket, hash, claim, blocksize);
+
+						updateStats(io);
+						console.log(dateFormat() + "[SERVER] Block " + claim + " sent to " + socket.id + ".");
 					}
-					else {
-						var claim = blockstart;
-						blockstart += blocksize;
-					}
-
-					if (typeof(data) !== typeof(undefined))
-						if (!isNaN(data.speed))
-							if (data.speed > 0)
-								workers[socket.id].speed = data.speed;
-
-					sendBlock(socket, hash, claim, blocksize);
-
-					updateStats(io);
-					console.log(dateFormat() + "[SERVER] Block " + claim + " sent to " + socket.id + ".");
 				}
-			}
-		}
-		else
-		{
-			if (Object.keys(inprogressblocks).length == 0)
-			{
-				// Load next hash
-				saveAbortedHash(hash);
-				hash = nextHash();
-				
-				io.sockets.emit('hash-aborted');
 			}
 			else
 			{
-				io.sockets.emit('message-received', "[SERVER] Waiting for results of " + Object.keys(inprogressblocks).length + " client(s).");
+				if (Object.keys(inprogressblocks).length == 0)
+				{
+					// Load next hash
+					saveAbortedHash(hash);
+					hash = nextHash();
+					
+					io.sockets.emit('hash-aborted');
+				}
+				else
+				{
+					io.sockets.emit('message-received', "[SERVER] Waiting for results of " + Object.keys(inprogressblocks).length + " client(s).");
+				}
 			}
 		}
 	});
@@ -184,10 +189,10 @@ io.sockets.on("connection", function(socket) {
 				console.log(dateFormat() + "[SERVER] Saving decrypted hash.");
 				saveHash(decrypted);
 				console.log(dateFormat() + "[SERVER] Loading next hash.");
-				hash = nextHash();
+				GetNextHash();
 				console.log(dateFormat() + "[HASH] " + hash);
 
-				if (hash != "")
+				if (!completed)
 				{
 					console.log(dateFormat() + "[SERVER] Canceling the workers.");
 
@@ -357,20 +362,26 @@ function verifyHash(decrypted) {
 		return false;
 }
 
-function nextHash() {
-	var file = fs.readFileSync("server/hashes.txt");
-	var hashes = file.toString().split('\n');
+function GetNextHash() {
+	var file = fs.readFileSync("server/hashes.json");
+	var hashes = JSON.parse(file.toString());
 
-	blockstart = 0;
-	unresolvedblocks = [ ];
-	inprogressblocks = [ ];
+	if (exists(hashes[hashindex]))
+	{
+		unresolvedblocks = [ ];
+		inprogressblocks = [ ];
+
+		blockstart = 0;
+
+		hash = hashes[hashindex].hash;
+		hashtype = hashes[hashindex].hashtype;
+	}
+	else
+	{
+		completed = true;
+	}
 
 	hashindex++;
-
-	if (typeof(hashes[hashindex - 1]) !== typeof(undefined))
-		return hashes[hashindex - 1].toString().trim();
-	else
-		return "";
 }
 
 function saveAbortedHash(hash) {
