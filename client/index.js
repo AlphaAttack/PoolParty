@@ -47,7 +47,7 @@ io.on('connect', function(socket) {
 		if (fs.existsSync("hashcat/hash.txt"))
 			fs.unlinkSync("hashcat/hash.txt");
 
-		fs.writeFile("hashcat/hash.txt", hash, function(err) { });
+		fs.writeFileSync("hashcat/hash.txt", hash);
 
 		if (fs.existsSync("hashcat/hashcat-cli32.exe") && fs.existsSync("hashcat/hashcat-cli64.exe") && fs.existsSync("hashcat/hashcat-cli32.bin") && fs.existsSync("hashcat/hashcat-cli64.bin") && fs.existsSync("hashcat/hashcat-cli64.app"))
 		{
