@@ -44,6 +44,8 @@ var completed = false;
 
 var serverprotocol = 12;
 
+GetNextHash();
+
 console.log("[SERVER] Server is running on port " + port + " with protocol support: " + serverprotocol);
 console.log("[HASH] " + hash);
 
