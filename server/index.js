@@ -235,8 +235,9 @@ io.sockets.on("connection", function(socket) {
 
 		if (exists(workers[socket.id]))
 		{
+			console.log(dateFormat() + "[SERVER] Client " + socket.id + " lost connection. Block " + workers[socket.id].blockclaimed + " added to queue.");
+			
 			workers[socket.id].drop();
-			console.log(dateFormat() + "[SERVER] Client " + socket.id + " lost connection. Block " + claimed + " added to queue.");
 
 			updateStats(io);
 		}
