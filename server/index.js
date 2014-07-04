@@ -313,8 +313,7 @@ function sendBlock(socket, hash, blockstart, blocksize) {
 
 	var blockdata = {
 		hashtodecrypt: hash.toString().trim(),
-		hashtype: '11',
-		attackmode: '3',
+		hashtype: hashtype,
 		blockstart: blockstart,
 		blocksize: blocksize - 1
 	};
