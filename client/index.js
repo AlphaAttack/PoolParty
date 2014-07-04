@@ -75,7 +75,7 @@ io.on('connect', function(socket) {
 			child.on('close', function(code) {
 				if (!fail)
 				{
-					if (!algorithm.BruteforceSucceeded)
+					if (!algorithm.BruteforceSucceeded())
 					{
 						console.log(dateFormat() + "[CLIENT] No hash discovered, requesting block from pool.");
 
