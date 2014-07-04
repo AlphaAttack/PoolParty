@@ -16,7 +16,7 @@ var speed = 0;
 
 var system = os.type();
 
-var version = 11;
+var version = 12;
 
 io.on('connect', function(socket) {
 	console.log(dateFormat() + "[CLIENT] Connected to pool.");

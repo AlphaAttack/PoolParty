@@ -40,7 +40,7 @@ var autoskip = 735091890625;
 var poolspeed = 0;
 var onlines = 0;
 
-var serverprotocol = 11;
+var serverprotocol = 12;
 
 console.log("[SERVER] Server is running on port " + port + " with protocol support: " + serverprotocol);
 console.log("[HASH] " + hash);
