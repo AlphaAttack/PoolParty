@@ -8,6 +8,10 @@ exports.SetHashType = function(hashtype) {
 	this.hashtype = hashtype;
 }
 
+exports.SetHash = function(currenthash) {
+	this.currenthash = currenthash;
+}
+
 exports.IsHashCorrect = function(hash) {
 	switch (this.hashtype)
 	{
@@ -19,6 +23,24 @@ exports.IsHashCorrect = function(hash) {
 			break;
 		case 100:
 			return sha1.IsHashCorrect(hash);
+			break;
+		default:
+			return false;
+			break;
+	}
+}
+
+exports.IsResultCorrect = function(result) {
+	switch (this.hashtype)
+	{
+		case 0:
+			return md5.IsResultCorrect(this.currenthash, result);
+			break;
+		case 11:
+			return joomla.IsResultCorrect(this.currenthash, result);
+			break;
+		case 100:
+			return sha1.IsResultCorrect(this.currenthash, result);
 			break;
 		default:
 			return false;

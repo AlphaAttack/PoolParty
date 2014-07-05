@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+
 exports.IsHashCorrect = function(hash) {
 	var hash = hash;
 
@@ -15,6 +17,22 @@ exports.IsHashCorrect = function(hash) {
 		else
 			return false;
 	}
+	else
+		return false;
+}
+
+exports.IsResultCorrect = function(currenthash, result) {
+	var md5 = currenthash.split(':')[0];
+	var salt = currenthash.split(':')[1];
+	var result = result;
+
+	md5crypto = crypto.createHash('md5');
+	md5crypto.update(result + salt);
+
+	var computed = md5crypto.digest('hex');
+
+	if (computed == md5)
+		return true;
 	else
 		return false;
 }

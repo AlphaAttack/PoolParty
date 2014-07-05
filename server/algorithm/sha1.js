@@ -1,3 +1,5 @@
+var crypto = require('crypto');
+
 exports.IsHashCorrect = function(hash) {
 	var hash = hash;
 
@@ -13,6 +15,21 @@ exports.IsHashCorrect = function(hash) {
 		else
 			return false;
 	}
+	else
+		return false;
+}
+
+exports.IsResultCorrect = function(currenthash, result) {
+	var sha1 = currenthash;
+	var result = result;
+
+	sha1crypto = crypto.createHash('sha1');
+	sha1crypto.update(result);
+
+	var computed = sha1crypto.digest('hex');
+
+	if (computed == sha1)
+		return true;
 	else
 		return false;
 }

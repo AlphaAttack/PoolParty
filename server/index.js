@@ -18,11 +18,11 @@ var workers = { };
 var unresolvedblocks = [ ];
 var inprogressblocks = [ ];
 
-var hashindex = 19; // Edit this line to start at a specific line
+var hashindex = 0; // Edit this line to start at a specific line
 var hash;
 var hashtype;
 var blockstart = 309000000000; // Edit this line to start at a specific block
-var blocksize = 0500000000; // Higher value require more time
+var blocksize = 1500000000; // Higher value require more time
 
 var maxresolvetime = 1800; // In seconds
 
@@ -186,7 +186,7 @@ io.sockets.on("connection", function(socket) {
 	socket.on('hash-found', function(decrypted) {
 		if (exists(decrypted))
 		{
-			if (verifyHash(decrypted))
+			if (algorithm.IsResultCorrect(decrypted))
 			{
 				console.log(dateFormat() + "[CLIENT] Client id " + socket.id + " decrypted the hash!");
 
@@ -366,7 +366,7 @@ function verifyHash(decrypted) {
 }
 
 function GetNextHash() {
-	var file = fs.readFileSync("server/hashes.json");
+	var file = fs.readFileSync("server/test.json");
 	var hashes = JSON.parse(file.toString());
 
 	if (exists(hashes[hashindex]))
@@ -375,6 +375,7 @@ function GetNextHash() {
 		hashtype = hashes[hashindex].hashtype;
 
 		algorithm.SetHashType(hashtype);
+		algorithm.SetHash(hash);
 		
 		if (algorithm.IsHashCorrect(hash))
 		{
