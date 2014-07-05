@@ -2,6 +2,8 @@ var http = require('http');
 var fs = require('fs');
 var crypto = require('crypto');
 
+var algorithm = require('./algorithm/algorithm.js');
+
 var port = 1337;
 
 var app = http.createServer(function(request, response) {
@@ -369,13 +371,20 @@ function GetNextHash() {
 
 	if (exists(hashes[hashindex]))
 	{
-		unresolvedblocks = [ ];
-		inprogressblocks = [ ];
-
-		blockstart = 0;
-
 		hash = hashes[hashindex].hash;
 		hashtype = hashes[hashindex].hashtype;
+
+		algorithm.SetHashType(hashtype);
+		
+		if (algorithm.IsHashCorrect(hash))
+		{
+			unresolvedblocks = [ ];
+			inprogressblocks = [ ];
+
+			blockstart = 0;
+		}
+		else
+			GetNextHash();
 	}
 	else
 	{
