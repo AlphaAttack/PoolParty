@@ -126,7 +126,7 @@ io.sockets.on("connection", function(socket) {
 				{
 					// Load next hash
 					saveAbortedHash(hash);
-					hash = nextHash();
+					GetNextHash();
 					
 					io.sockets.emit('hash-aborted');
 				}
