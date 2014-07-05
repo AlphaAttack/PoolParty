@@ -1,6 +1,7 @@
 var fs = require('fs');
 
 var hashtype;
+var currenthash;
 
 var joomla = require('./joomla.js');
 var md5 = require('./md5.js');
@@ -10,19 +11,23 @@ exports.SetHashType = function(hashtype) {
 	this.hashtype = hashtype;
 }
 
+exports.SetHash = function(currenthash) {
+	this.currenthash = currenthash;
+}
+
 exports.BruteforceSucceeded = function() {
 	if (fs.existsSync("hashcat/decrypted.txt"))
 	{
-		switch (hashtype)
+		switch (this.hashtype)
 		{
 			case 0:
-				return md5.BruteforceSucceeded();
+				return md5.BruteforceSucceeded(this.currenthash);
 				break;
 			case 11:
-				return joomla.BruteforceSucceeded();
+				return joomla.BruteforceSucceeded(this.currenthash);
 				break;
 			case 100:
-				return sha1.BruteforceSucceeded();
+				return sha1.BruteforceSucceeded(this.currenthash);
 				break;
 		}
 	}
@@ -35,7 +40,7 @@ exports.BruteforceSucceeded = function() {
 exports.BruteforceResult = function() {
 	if (fs.existsSync("hashcat/decrypted.txt"))
 	{
-		switch (hashtype)
+		switch (this.hashtype)
 		{
 			case 0:
 				return md5.BruteforceResult();

@@ -1,6 +1,6 @@
 var fs = require('fs');
 
-exports.BruteforceSucceeded = function() {
+exports.BruteforceSucceeded = function(currenthash) {
 
 	var file = fs.readFileSync("hashcat/decrypted.txt").toString().trim();
 

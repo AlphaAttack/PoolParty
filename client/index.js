@@ -42,11 +42,11 @@ io.on('connect', function(socket) {
 
 		var hash = blockdata.hashtodecrypt;
 		var hashtype = blockdata.hashtype;
-		var attackmode = blockdata.attackmode;
 		var blockstart = blockdata.blockstart;
 		var blocksize = blockdata.blocksize;
 
 		algorithm.SetHashType(hashtype);
+		algorithm.SetHash(hash);
 
 		if (fs.existsSync("hashcat/hash.txt"))
 			fs.unlinkSync("hashcat/hash.txt");
@@ -55,7 +55,7 @@ io.on('connect', function(socket) {
 
 		if (fs.existsSync("hashcat/hashcat-cli32.exe") && fs.existsSync("hashcat/hashcat-cli64.exe") && fs.existsSync("hashcat/hashcat-cli32.bin") && fs.existsSync("hashcat/hashcat-cli64.bin") && fs.existsSync("hashcat/hashcat-cli64.app"))
 		{
-			var command = '"hashcat/hashcat-cli64.exe" -m ' + hashtype + ' -a ' + attackmode + ' -s ' + blockstart + ' -l ' + blocksize + ' -o "hashcat/decrypted.txt" "hashcat/hash.txt" ?a?a?a?a?a?a?a?a?a?a?a?a?a';
+			var command = '"hashcat/hashcat-cli64.exe" -m ' + hashtype + ' -a 3 -s ' + blockstart + ' -l ' + blocksize + ' -o "hashcat/decrypted.txt" "hashcat/hash.txt" ?a?a?a?a?a?a?a?a?a?a?a?a?a';
 
 			var fail = false;
 
@@ -131,40 +131,6 @@ io.on('connect', function(socket) {
 		console.log(dateFormat() + "[CLIENT] Connection lost with pool.");
 	});
 });
-
-function hashFound() {
-	if (!fs.existsSync("hashcat.pot"))
-			fs.writeFileSync("hashcat.pot", "");
-
-	var file = fs.readFileSync("hashcat.pot").toString().trim();
-
-	var results = file.split('\n');
-
-	if (results.length > 0)
-	{
-		if (results[results.length - 1].indexOf(currenthash.trim()) > -1)
-			return true;
-		else
-			return false;
-	}
-	else
-		return false;
-}
-
-function decrypted() {
-	var file = fs.readFileSync("hashcat.pot").toString().trim();
-
-	var results = file.split('\n');
-
-	if (results.length > 0)
-	{
-		var result = results[results.length - 1].split(':')[2].split('\n')[0].trim();
-
-		return result;
-	}
-	else
-		return "";
-}
 
 function parseSpeed(string) {
 
