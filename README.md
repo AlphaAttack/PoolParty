@@ -3,6 +3,8 @@ Hashcat Pool
 
 Hashcat Pool is a javascript-based server which decrypts hashes using CPUs of client logged.
 
+Current version is **0.13**
+
 ### Currently supported hash type:
 - [    0 ] MD5
 - [   11 ] Joomla
