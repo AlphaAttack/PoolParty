@@ -6,6 +6,8 @@ var currenthash;
 var joomla = require('./joomla.js');
 var md5 = require('./md5.js');
 var sha1 = require('./sha1.js');
+var sha256 = require('./sha256.js');
+var sha512 = require('./sha512.js');
 
 exports.SetHashType = function(hashtype) {
 	this.hashtype = hashtype;
@@ -29,6 +31,12 @@ exports.BruteforceSucceeded = function() {
 			case 100:
 				return sha1.BruteforceSucceeded(this.currenthash);
 				break;
+			case 1400:
+				return sha256.BruteforceSucceeded(this.currenthash);
+				break;
+			case 1700:
+				return sha512.BruteforceSucceeded(this.currenthash);
+				break;
 		}
 	}
 	else
@@ -50,6 +58,12 @@ exports.BruteforceResult = function() {
 				break;
 			case 100:
 				return sha1.BruteforceResult();
+				break;
+			case 1400:
+				return sha256.BruteforceResult();
+				break;
+			case 1700:
+				return sha512.BruteforceResult();
 				break;
 		}
 	}
