@@ -13,10 +13,11 @@ var child;
 
 var currenthash;
 var speed = 0;
+var isbruteforcing = false;
 
 var system = os.type();
 
-var version = 12;
+var version = 13;
 
 io.on('connect', function(socket) {
 	console.log(dateFormat() + "[CLIENT] Connected to pool.");
@@ -48,6 +49,9 @@ io.on('connect', function(socket) {
 		algorithm.SetHashType(hashtype);
 		algorithm.SetHash(hash);
 
+		if (fs.existsSync("hashcat/decrypted.txt"))
+			fs.unlinkSync("hashcat/decrypted.txt");
+
 		if (fs.existsSync("hashcat/hash.txt"))
 			fs.unlinkSync("hashcat/hash.txt");
 
@@ -59,43 +63,51 @@ io.on('connect', function(socket) {
 
 			var fail = false;
 
-			console.log(dateFormat() + "[CLIENT] Started bruteforcing process.");
-			child = exec(command, function(error, stdout, stderr) { 
-				if (error === null && stderr == "")
-				{
-						speed = parseSpeed(stdout);
+			if (!isbruteforcing)
+			{
+				console.log(dateFormat() + "[CLIENT] Started bruteforcing process.");
+				
+				isbruteforcing = true;
 
-						if (stdout.indexOf("Started:") == -1 || stdout.indexOf("Stopped:") == -1)
-							fail = true;
-				}
-				else
-					fail = true;
-			});
-
-			child.on('close', function(code) {
-				if (!fail)
-				{
-					if (!algorithm.BruteforceSucceeded())
+				hashcat = exec(command, function(error, stdout, stderr) { 
+					if (error === null && stderr == "")
 					{
-						console.log(dateFormat() + "[CLIENT] No hash discovered, requesting block from pool.");
+							speed = parseSpeed(stdout);
 
-						io.emit('block-completed', blockstart);
+							if (stdout.indexOf("Started:") == -1 || stdout.indexOf("Stopped:") == -1)
+								fail = true;
+					}
+					else
+						fail = true;
+				});
+
+				hashcat.on('close', function(code) {
+					if (!fail)
+					{
+						if (!algorithm.BruteforceSucceeded())
+						{
+							console.log(dateFormat() + "[CLIENT] No hash discovered, requesting block from pool.");
+
+							io.emit('block-completed', blockstart);
+						}
+						else
+						{
+							var result = algorithm.BruteforceResult();
+
+							console.log(dateFormat() + "[CLIENT] Hash discovered: " + result + ".");
+							
+							io.emit('hash-found', result);
+						}
 					}
 					else
 					{
-						var result = algorithm.BruteforceResult();
-
-						console.log(dateFormat() + "[CLIENT] Hash discovered: " + result + ".");
-						
-						io.emit('hash-found', result);
+						console.log(dateFormat() + "[CLIENT] Error while computing the block.");
+						io.emit('block-error');
 					}
-				}
-				else
-				{
-					console.log(dateFormat() + "[CLIENT] Error while computing the block.");
-					io.emit('block-error');
-				}
-			});
+
+					isbruteforcing = false;
+				});
+			}
 		}
 		else
 		{
@@ -128,7 +140,9 @@ io.on('connect', function(socket) {
 	});
 
 	io.on('disconnect', function(){
-		console.log(dateFormat() + "[CLIENT] Connection lost with pool.");
+		console.log(dateFormat() + "[CLIENT] Connection lost with pool. (Auto-reconnection is disabled by the server).");
+		io.disconnect();
+		io.destroy();
 	});
 });
 

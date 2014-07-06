@@ -18,10 +18,10 @@ var workers = { };
 var unresolvedblocks = [ ];
 var inprogressblocks = [ ];
 
-var hashindex = 0; // Edit this line to start at a specific line
+var hashindex = 31; // Edit this line to start at a specific line
 var hash;
 var hashtype;
-var blockstart = 309000000000; // Edit this line to start at a specific block
+var blockstart = 568500000000; // Edit this line to start at a specific block
 var blocksize = 1500000000; // Higher value require more time
 
 var maxresolvetime = 1800; // In seconds
@@ -115,7 +115,6 @@ io.sockets.on("connection", function(socket) {
 
 						sendBlock(socket, hash, claim, blocksize);
 
-						updateStats(io);
 						console.log(dateFormat() + "[SERVER] Block " + claim + " sent to " + socket.id + ".");
 					}
 				}
@@ -135,6 +134,8 @@ io.sockets.on("connection", function(socket) {
 					io.sockets.emit('message-received', "[SERVER] Waiting for results of " + Object.keys(inprogressblocks).length + " client(s).");
 				}
 			}
+
+			updateStats(io);
 		}
 	});
 
@@ -366,7 +367,7 @@ function verifyHash(decrypted) {
 }
 
 function GetNextHash() {
-	var file = fs.readFileSync("server/test.json");
+	var file = fs.readFileSync("server/hashes.json");
 	var hashes = JSON.parse(file.toString());
 
 	if (exists(hashes[hashindex]))
